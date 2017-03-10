@@ -6,8 +6,19 @@ Ethernet Pauseコマンドを送ります。
 
 send_pause [-q] if_name [count [pause_time [interval_sec [interval_usec]]]]
 
-Linuxの都合上、rootにならないと使えません。
-sudoコマンドを使うかsuでrootになって実行してください。
+Linuxの都合上、rootになるか、capabilityを与えないと使えません。
+テストのためにはsudoコマンドを使うかsuでrootになって実行してみるのが
+よいと思います。
+恒常的に使うにはCAP_NET_RAWケーバビリティを設定しておくのがよいと
+思います。設定するには、いったんrootになって
+sudo setcap cap_net_raw=ep send_pause
+とします。設定できたかどうかの確認はgetcapを使って
+getcap send_pauseとします（こちらはrootでなくても実行できます）。
+send_pause = cap_net_raw+ep
+と出てこればOKです。これで一般ユーザーでも実行可能になります。
+取り去るには
+sudo setcap -r send_pause
+とします。
 
 if_name: pauseコマンドを送るネットワークインターフェイス名（例: eth0,
          eno1, enp0s6)を指定します。これは必須です。
