@@ -29,7 +29,9 @@ pausetime: 0 - 65535
 /*
  * 3. Determine the index number of the Ethernet interface to be used.
  *    (use interface name such as eth0, eno1, enp0s8 etc.)
+ *    If we cannot use if_nametoindex(), use following get_en_index()
  */
+#if 0
 static int get_en_index(int fd, char *if_name)
 {
     struct ifreq ifr; /* netdevice(7) */
@@ -51,6 +53,7 @@ static int get_en_index(int fd, char *if_name)
 
     return ifr.ifr_ifindex;
 }
+#endif
 
 int send_flow_ctrl_pause(char *if_name, int pause_time)
 {
@@ -69,9 +72,9 @@ int send_flow_ctrl_pause(char *if_name, int pause_time)
     }
 
     /* 3. Determine the index number of the Ethernet interface to be used. */
-    int if_index = get_en_index(fd, if_name);
-    if (if_index < 0) {
-        warnx("cannot get if_index for %s", if_name);
+    unsigned int if_index;
+    if ( (if_index = if_nametoindex(if_name)) == 0) {
+        warn("if_nametoindex");
         return -1;
     }
     
