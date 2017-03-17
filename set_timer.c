@@ -31,3 +31,13 @@ struct timeval float2timeval(double x)
 
     return tv;
 }
+
+struct timeval str2timeval(char *str)
+{
+    struct timeval tv;
+    double x = strtod(str, NULL);
+    
+    tv = float2timeval(x);
+
+    return tv;
+}
