@@ -4,3 +4,4 @@ syntax: glob
 *.d
 *~
 send_pause
+data
