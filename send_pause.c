@@ -55,6 +55,10 @@ void send_pause_print(int signo)
 
 void send_pause(int signo)
 {
+    if (debug) {
+        fprintfwt(stdout, "try to send pause to %s, pause time: %d\n", if_name, pause_time);
+    }
+
     if (send_flow_ctrl_pause(if_name, pause_time) < 0) {
          exit(1);
          // errx(1, "flow_ctrl_pause() error");
