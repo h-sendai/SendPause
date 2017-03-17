@@ -2,15 +2,26 @@ send_pause コマンド README
 
 Ethernet Pauseコマンドを送ります。
 
-コマンドライン引数
+SYNOPSIS
+========
 
-send_pause [-q] if_name [count [pause_time [interval_sec [interval_usec]]]]
+send_pause [-q] [-c count] [-p pause_time] [-i interval_sec] if_name
+
+説明
+====
+
+引数if_nameで指定したネットワークインターフェイスからEthernet pause
+を送ります。pause timeの値は-pで指定できます。指定しない場合は
+65535 (pause time最大値)を使います。
+
+利用上の注意
+============
 
 Linuxの都合上、rootになるか、capabilityを与えないと使えません。
 テストのためにはsudoコマンドを使うかsuでrootになって実行してみるのが
 よいと思います。
-恒常的に使うにはCAP_NET_RAWケーバビリティを設定しておくのがよいと
-思います。設定するには、いったんrootになって
+rootにならずに使えるようにするにはCAP_NET_RAWケーバビリティを設定して
+ください。設定するには、いったんrootになって
 sudo setcap cap_net_raw=ep send_pause
 とします。設定できたかどうかの確認はgetcapを使って
 getcap send_pauseとします（こちらはrootでなくても実行できます）。
@@ -20,25 +31,26 @@ send_pause = cap_net_raw+ep
 sudo setcap -r send_pause
 とします。
 
+コマンドライン引数
+==================
+
 if_name: pauseコマンドを送るネットワークインターフェイス名（例: eth0,
          eno1, enp0s6)を指定します。これは必須です。
 デフォルトでは1秒に1回、pause timeが65535（最大値）のpauseコマンドを
 送ります。ctrl-cが押されるまで送り続けます。
 
-送る回数を指定するにはcountで指定します:
-sudo send_pause eth0 10 (1秒に1回の割合で10回送ったら終了します）
-送る回数に0を指定するとctrl-cが押されるまで送り続けます。
+送る回数を指定するには-c countで指定します:
+(例) send_pause eth0 -c 10 (1秒に1回の割合で10回送ったら終了します）
+指定しなかった場合、あるいは0を指定した場合はCtrl-Cで止めるまで
+1秒に1回送り続けます。
 
-pause timeの値を指定するにはpause_timeで、送る回数とともに指定します。
-sudo send_pause eth0 0 12345 (pause timeの値として12345のパケットを
+pause timeの値を指定するには-p pause_timeで指定します:
+(例) send_pause -p 12345 eth0 (pause timeの値として12345のパケットを
 送り続けます）
 
-1秒に1回の割合を変えるにはinterval_sec（秒）とinterval_usec(マイクロ秒）
-で指定します。interval_secを指定し、interval_usecを指定しなかった場合は
-interval_usecとして0が指定されたことになります。
-
-sudo send_pause eth0 0 12345 2 （2秒に1回）
-sudo send_pause eth0 0 12345 2 500000 (2.5秒に1回）
+1秒に1回の割合を変えるには-i interval_secで指定します:
+(例) send_pause -i 2 eth0 (2秒に1回pauseパケットを送ります)
+interval_secとして小数も指定できます(例 -i 1.5)。
 
 パケットを送ると送った旨画面に表示します。表示をやめるには-qオプションを
 指定します:
