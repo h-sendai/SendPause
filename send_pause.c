@@ -23,19 +23,21 @@ int debug      = 0;
 
 int usage(void)
 {
-    char msg[] = "Usage: send_pause if_name [count [pause_time [interval_sec [interval_usec]]]]\n"
+    char msg[] = "Usage: send_pause [-c count] [-p pause_time] [-i interval_sec] if_name\n"
                  "Arguments:\n"
-                 "if_name:       NIC name such as eth0, eno1, enp0s6.\n"
-                 "count:         number of send pause packet.  0 means forever.\n"
-                 "pause_time:    pause time (0 - 65535).  Default 65535 (max).\n"
-                 "interval_sec:  default 1 second.\n"
-                 "interval_usec: micro second.\n"
-                 "Sample command:\n"
-                 "send_pause eth0          send pause (pause_time 65535) packet every 1 second forever\n"
-                 "send_pause eth0 10       send pause (pause_time 65535) packet every 1 second 10 times\n"
-                 "send_pause eth0 10 32768 send pause (pause_time 32768) packet every 1 second 10 times\n"
-                 "send_pause eth0  0 32768 send pause (pause_time 32768) packet every 1 second forever\n"
-                 "Hint: You may use $((2**15)) on the shell command line to caculate 2^15\n";
+                 "if_name (mandatory): NIC name such as eth0, eno1, enp0s6.\n"
+                 "-c count:            Exit after send count pause packets.  Default no limit.\n"
+                 "-p pause_time:       pause time (0 - 65535).  Default 65535 (max).\n"
+                 "-i interval_sec:     Default 1 second.  You may use float number (1.5 for example)\n"
+                 "\n"
+                 "Hint: You may use $((2**15)) on the shell command line to caculate 2^15\n"
+                 "pause_v   decimal     512 bt  10GbE ms\n"
+                 "--------  -------  ---------  --------\n"
+                 "2**32-1     65535   33553920      33.5\n"
+                 "2**15       32768   16777216      16.7\n"
+                 "2**14       16384    8388608       8.3\n"
+                 "2**13        8192    4194304       4.1\n"
+                 "2**12        4096    2097152       2.0\n";
 
     fprintf(stderr, "%s", msg);
 
@@ -53,12 +55,12 @@ void send_pause_print(int signo)
 
 void send_pause(int signo)
 {
-    if (! quiet) {
-        fprintfwt(stdout, "send pause to %s, pause time: %d\n", if_name, pause_time);
-    }
     if (send_flow_ctrl_pause(if_name, pause_time) < 0) {
          exit(1);
          // errx(1, "flow_ctrl_pause() error");
+    }
+    if (! quiet) {
+        fprintfwt(stdout, "send pause to %s, pause time: %d\n", if_name, pause_time);
     }
 
     return;
@@ -66,17 +68,25 @@ void send_pause(int signo)
 
 int main(int argc, char *argv[])
 {
-    int interval_sec  = 1;
-    int interval_usec = 0;
-    int count         = 0;
-    int max_count     = 0;
+    struct timeval interval = { 1, 0 };
+    int count               = 0;
+    int max_count           = 0;
 
     int c;
 
-    while ( (c = getopt(argc, argv, "dq")) != -1) {
+    while ( (c = getopt(argc, argv, "c:di:p:q")) != -1) {
         switch (c) {
+            case 'c':
+                max_count = strtol(optarg, NULL, 0);
+                break;
             case 'd':
                 debug = 1;
+                break;
+            case 'i':
+                interval = str2timeval(optarg);
+                break;
+            case 'p':
+                pause_time = strtol(optarg, NULL, 0);
                 break;
             case 'q':
                 quiet = 1;
@@ -86,29 +96,15 @@ int main(int argc, char *argv[])
     argc -= optind;
     argv += optind;
 
-    if (argc == 0 || argc > 5) {
+    if (argc != 1) {
         usage();
         exit(1);
     }
 
-    if (argc > 0) { /* one argument as "send_pause eth0" */
-        if_name = argv[0];
-    }
-    if (argc > 1) {
-        max_count = strtol(argv[1], NULL, 0);
-    }
-    if (argc > 2) {
-        pause_time = strtol(argv[2], NULL, 0);
-    }
-    if (argc > 3) {
-        interval_sec = strtol(argv[3], NULL, 0);
-    }
-    if (argc > 4) {
-        interval_usec = strtol(argv[4], NULL, 0);
-    }
+    if_name = argv[0];
 
     my_signal(SIGALRM, send_pause);
-    set_timer(interval_sec, interval_usec, interval_sec, interval_usec);
+    set_timer(interval.tv_sec, interval.tv_usec, interval.tv_sec, interval.tv_usec);
 
     /* send first pause packet */
     send_pause(SIGALRM);
