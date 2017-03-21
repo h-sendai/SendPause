@@ -31,7 +31,7 @@ int usage(void)
                  "-i interval_sec:     Default 1 second.  You may use float number (1.5 for example)\n"
                  "\n"
                  "Hint: You may use $((2**15)) on the shell command line to caculate 2^15\n"
-                 "pause_v   decimal     512 bt  10GbE ms\n"
+                 "pause_v   decimal     512 bt   1GbE ms\n"
                  "--------  -------  ---------  --------\n"
                  "2**32-1     65535   33553920      33.5\n"
                  "2**15       32768   16777216      16.7\n"
