@@ -27,9 +27,8 @@ pausetime: 0 - 65535
 #include "flow_ctrl_pause.h"
 
 /*
- * 3. Determine the index number of the Ethernet interface to be used.
- *    (use interface name such as eth0, eno1, enp0s8 etc.)
- *    If we cannot use if_nametoindex(), use following get_en_index()
+ If if_nameindex() is not available, use this function.
+ Glibc does have if_nametoindex() POSIX function.
  */
 #if 0
 static int get_en_index(int fd, char *if_name)
@@ -55,19 +54,26 @@ static int get_en_index(int fd, char *if_name)
 }
 #endif
 
-int send_flow_ctrl_pause(char *if_name, int pause_time)
+int create_pause_socket()
+{
+    /* 1. Select the required EtherType. */
+    /* 2. Create the AF_PACKET socket (see packet(7)). */
+
+    int fd = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_PAUSE));
+    if (fd < 0) {
+        warn("socket");
+        return -1;
+    }
+
+    return fd;
+}
+
+int send_pause_packet(int sockfd, char *if_name, int pause_time)
 {
     int i;
     
     if (pause_time < 0 || pause_time > 65535) {
         warn("too large pause_time: %d", pause_time);
-        return -1;
-    }
-
-    /* 2. Create the AF_PACKET socket (see packet(7)). */
-    int fd = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_PAUSE));
-    if (fd < 0) {
-        warn("socket");
         return -1;
     }
 
@@ -79,13 +85,18 @@ int send_flow_ctrl_pause(char *if_name, int pause_time)
     }
     
     /* 4. Construct the destination address */
-    unsigned char ether_pause_addr[] = { 0x01, 0x80, 0xc2, 0x00, 0x00, 0x01 };
+    // unsigned char ether_pause_addr[] = { 0x01, 0x80, 0xc2, 0x00, 0x00, 0x01 };
     struct sockaddr_ll addr = { 0 };
     addr.sll_family   = AF_PACKET;
     addr.sll_ifindex  = if_index;
     addr.sll_halen    = ETHER_ADDR_LEN;
     addr.sll_protocol = htons(ETH_P_PAUSE);
-    memcpy(addr.sll_addr, ether_pause_addr, ETHER_ADDR_LEN);
+    addr.sll_addr[0]  = 0x01;
+    addr.sll_addr[1]  = 0x80;
+    addr.sll_addr[2]  = 0xc2;
+    addr.sll_addr[3]  = 0x00;
+    addr.sll_addr[4]  = 0x00;
+    addr.sll_addr[5]  = 0x01;
 
     unsigned char en_payload[46];
     en_payload[0] = 0x00;
@@ -97,13 +108,8 @@ int send_flow_ctrl_pause(char *if_name, int pause_time)
     }
 
     /* 5. Send the Ethernet frame. */
-    if (sendto(fd, en_payload, sizeof(en_payload), 0, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+    if (sendto(sockfd, en_payload, sizeof(en_payload), 0, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
         warn("sendto");
-        return -1;
-    }
-
-    if (close(fd) < 0) {
-        warn("close");
         return -1;
     }
 
@@ -111,27 +117,52 @@ int send_flow_ctrl_pause(char *if_name, int pause_time)
 }
 
 #ifdef USE_MAIN
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#include <err.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
+
+#include "flow_ctrl_pause.h"
+
+int usage(void)
+{
+    char msg[] = "Usage: send_pause if_name pause_time (0 - 65535)";
+    fprintf(stderr, "%s\n", msg);
+
+    return 0;
+}
+
 int main(int argc, char *argv[])
 {
-    char *if_name;
-    int pause_time;
-
     if (argc != 3) {
-        fprintf(stderr, "Usage: sample if_name pause_time (0 - 65535)\n");
-        exit(1);
-    }
-    if_name    = argv[1];
-    pause_time = strtol(argv[2], NULL, 0);
-
-    uid_t uid = geteuid();
-    if (uid != 0) {
-        fprintf(stderr, "root priv. required.  Use sudo or su\n");
+        usage();
         exit(1);
     }
 
-    if (send_flow_ctrl_pause(if_name, pause_time) < 0) {
-        fprintf(stderr, "flow_ctrl_pause() error\n");
+    char *if_name  = argv[1];
+    int pause_time = strtol(argv[2], NULL, 0);
+    if (pause_time < 0 || pause_time > 0xffff) {
+        fprintf(stderr, "pause_time too long: %d (should be 0 - 65535)\n", pause_time);
     }
+
+    int sockfd = create_pause_socket();
+    if (sockfd < 0) {
+        exit(1);
+    }
+
+    if (send_pause_packet(sockfd, if_name, pause_time) < 0) {
+        exit(1);
+    }
+
+    close(sockfd);
 
     return 0;
 }

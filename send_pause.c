@@ -17,6 +17,7 @@
 #include "flow_ctrl_pause.h"
 
 char *if_name  = NULL;
+int sockfd     = -1;
 int pause_time = 65535;
 int quiet      = 0;
 int debug      = 0;
@@ -59,7 +60,7 @@ void send_pause(int signo)
         fprintfwt(stdout, "try to send pause to %s, pause time: %d\n", if_name, pause_time);
     }
 
-    if (send_flow_ctrl_pause(if_name, pause_time) < 0) {
+    if (send_pause_packet(sockfd, if_name, pause_time) < 0) {
          exit(1);
          // errx(1, "flow_ctrl_pause() error");
     }
@@ -106,6 +107,7 @@ int main(int argc, char *argv[])
     }
 
     if_name = argv[0];
+    sockfd  = create_pause_socket();
 
     my_signal(SIGALRM, send_pause);
     set_timer(interval.tv_sec, interval.tv_usec, interval.tv_sec, interval.tv_usec);
@@ -122,6 +124,10 @@ int main(int argc, char *argv[])
             pause();
             count ++;
         }
+    }
+    
+    if (close(sockfd) < 0) {
+        err(1, "close");
     }
 
     return 0;

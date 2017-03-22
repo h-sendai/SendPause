@@ -50,6 +50,7 @@ pausetime: 0 - 65535
 #include <time.h>
 #include <unistd.h>
 
-extern int send_flow_ctrl_pause(char *if_name, int pause_time);
+extern int create_pause_socket();
+extern int send_pause_packet(int sockfd, char *if_name, int pause_time);
 
 #endif
