@@ -86,7 +86,9 @@ int send_pause_packet(int sockfd, char *if_name, int pause_time)
     
     /* 4. Construct the destination address */
     // unsigned char ether_pause_addr[] = { 0x01, 0x80, 0xc2, 0x00, 0x00, 0x01 };
-    struct sockaddr_ll addr = { 0 };
+    struct sockaddr_ll addr;
+    memset(&addr, 0, sizeof(addr));
+
     addr.sll_family   = AF_PACKET;
     addr.sll_ifindex  = if_index;
     addr.sll_halen    = ETHER_ADDR_LEN;
