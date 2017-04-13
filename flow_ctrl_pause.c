@@ -13,6 +13,7 @@ pausetime: 0 - 65535
 /*
  * MicroMiniHowto: 
  * Send an arbitrary Ethernet frame using an AF_PACKET socket in C
+ * http://www.microhowto.info/howto/send_an_arbitrary_ethernet_frame_using_an_af_packet_socket_in_c.html
  */
 
 /*

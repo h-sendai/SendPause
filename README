@@ -55,3 +55,9 @@ interval_secとして小数も指定できます(例 -i 1.5)。
 パケットを送ると送った旨画面に表示します。表示をやめるには-qオプションを
 指定します:
 sudo send_pause -q eth0
+
+Reference
+=========
+
+Send an arbitrary Ethernet frame using an AF_PACKET socket in C
+http://www.microhowto.info/howto/send_an_arbitrary_ethernet_frame_using_an_af_packet_socket_in_c.html
